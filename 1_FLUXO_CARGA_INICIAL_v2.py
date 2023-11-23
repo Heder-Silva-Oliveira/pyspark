@@ -79,7 +79,8 @@ if  status == 0:
                         (when(fxdr.RECEBIMENTO_DIA.isNull(),0).otherwise(fxdr.RECEBIMENTO_DIA) - when(fxdp.PAGAMENTO_DIA.isNull(),0).otherwise(fxdp.PAGAMENTO_DIA)).alias("SALDO_DIARIO")
                 )
                 
-                window_spec = Window.orderBy('DATA').rowsBetween(Window.unboundedPreceding, 0)
+                
+                window_spec = Window.orderBy('DATA').partitionBy(lit(1)).rowsBetween(Window.unboundedPreceding, 0)
                 fluxo_diario_f = fluxo_diario.withColumn('ACUMULADO_DIARIO',sum('SALDO_DIARIO').over(window_spec)).withColumn("DATA_FECHAMENTO", last_day("DATA")).withColumn('DATA_PROCESSADO',current_timestamp())
 
                 #MENSAL
@@ -99,8 +100,9 @@ if  status == 0:
                         (when(fmr.RECEBIMENTO_MES.isNull(),0).otherwise(fmr.RECEBIMENTO_MES) - when(fmp.PAGAMENTO_MES.isNull(),0).otherwise(fmp.PAGAMENTO_MES)).alias("SALDO_MENSAL")
                         )
 
-                window = Window.orderBy('DATA_FECHAMENTO').rowsBetween(Window.unboundedPreceding, 0)
-                fx_mensal_f = fx_mensal.withColumn('VALOR_ACUMULADO_MES', sum('SALDO_MENSAL').over(window)).withColumn('DATA_PROCESSADO',current_timestamp())
+                
+                window_spec = Window.orderBy('DATA_FECHAMENTO').partitionBy(lit(1)).rowsBetween(Window.unboundedPreceding, 0)
+                fx_mensal_f = fx_mensal.withColumn('VALOR_ACUMULADO_MES', sum('SALDO_MENSAL').over(window_spec)).withColumn('DATA_PROCESSADO',current_timestamp())
                 #update status 
                 parametro = parametro.withColumn('VAR_STATUS', when(parametro.COD == 1, lit(1)).otherwise(parametro.VAR_STATUS))
                 print('parametro alterado')
@@ -166,8 +168,8 @@ if  status == 0:
                         (when(fmr.RECEBIMENTO_MES.isNull(),0).otherwise(fmr.RECEBIMENTO_MES) - when(fmp.PAGAMENTO_MES.isNull(),0).otherwise(fmp.PAGAMENTO_MES)).alias("SALDO_MENSAL")
                         )
 
-                window = Window.orderBy('DATA_FECHAMENTO').rowsBetween(Window.unboundedPreceding, 0)
-                fx_mensal_f = fx_mensal.withColumn('VALOR_ACUMULADO_MES', sum('SALDO_MENSAL').over(window)).withColumn('DATA_PROCESSADO',current_timestamp())
+                window_spec = Window.orderBy('DATA_FECHAMENTO').partitionBy(lit(1)).rowsBetween(Window.unboundedPreceding, 0)
+                fx_mensal_f = fx_mensal.withColumn('VALOR_ACUMULADO_MES', sum('SALDO_MENSAL').over(window_spec)).withColumn('DATA_PROCESSADO',current_timestamp())
                  #update status 
                 parametro = parametro.withColumn('VAR_STATUS', when(parametro.COD == 1, lit(1)).otherwise(parametro.VAR_STATUS))
 
