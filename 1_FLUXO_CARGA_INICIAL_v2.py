@@ -181,7 +181,6 @@ fx_mensal_f.show()
 
 #parametro.show()
 
-# COMMAND ----------
 
 fx_mensal_f.write.jdbc(url=mysql_url, table='fluxo_caixa_mensal_historico', mode='append', properties=mysql_properties)
 fluxo_diario_f.write.jdbc(url=mysql_url, table='fluxo_caixa_diario_historico', mode='append', properties=mysql_properties)
