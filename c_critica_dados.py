@@ -10,7 +10,6 @@ from pyspark.sql.types import StructType, StructField, StringType, IntegerType, 
  
 spark = SparkSession.builder.appName("critica_dados").config("spark.driver.extraClassPath", driver_jar_path).getOrCreate()
 
-
 #FUNÇÕES
 def cnpj_valido(cnpj):
     cnpj = re.sub(r'[^0-9]', '', cnpj)

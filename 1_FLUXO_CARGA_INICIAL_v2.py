@@ -170,9 +170,9 @@ if  status == 0:
                 fx_mensal_f = fx_mensal.withColumn('VALOR_ACUMULADO_MES', sum('SALDO_MENSAL').over(window)).withColumn('DATA_PROCESSADO',current_timestamp())
                  #update status 
                 parametro = parametro.withColumn('VAR_STATUS', when(parametro.COD == 1, lit(1)).otherwise(parametro.VAR_STATUS))
-print('fluxo diario')
+
 fluxo_diario_f.show()
-print("fluxo mensal")
+
 fx_mensal_f.show()
 
 # COMMAND ----------

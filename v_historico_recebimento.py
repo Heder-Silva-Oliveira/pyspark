@@ -115,7 +115,6 @@ for id in lista_alterar:
 # Fecha a conexão com servidor
 conn.close()
 
-
 # Encerra a sessão Spark
 spark.stop()
 

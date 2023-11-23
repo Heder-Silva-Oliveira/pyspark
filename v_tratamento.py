@@ -304,7 +304,6 @@ if lista_endereco:
 # Fecha a conexão com servidor
 conn.close()
 
-
 # Encerra a sessão Spark
 spark.stop()
 

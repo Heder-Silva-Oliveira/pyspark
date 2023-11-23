@@ -44,7 +44,6 @@ ID_HIST_PAGAMENTO	int AI PK
 	VALOR_PARCELA	decimal(16,2)
 	VALOR_PARCELA_PAGO	decimal(16,2)
 '''
-
 programacao_pagamento_final_bd = spark.read.format('jdbc')\
     .option('url', mysql_url)\
     .option('dbtable', 'programacao_pagamento')\

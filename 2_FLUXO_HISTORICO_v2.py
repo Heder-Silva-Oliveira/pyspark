@@ -158,7 +158,7 @@ if  status == 1:
                 window = Window.orderBy('DATA_FECHAMENTO').rowsBetween(Window.unboundedPreceding, 0)
                 fx_mensal_f = fx_mensal.withColumn('VALOR_ACUMULADO_MES', sum('SALDO_MENSAL').over(window)+ acumulado_mes).withColumn('DATA_PROCESSADO',current_timestamp())
                  
-fluxo_diario_f.show(100)
+fluxo_diario_f.show()
 fx_mensal_f.show()
 fx_mensal_f.write.jdbc(url=mysql_url, table='fluxo_caixa_mensal_historico', mode='append', properties=mysql_properties)
 fluxo_diario_f.write.jdbc(url=mysql_url, table='fluxo_caixa_diario_historico', mode='append', properties=mysql_properties)

@@ -60,7 +60,3 @@ print('Programação recebimento')
 programacao_recebimento.printSchema()
 programacao_recebimento.write.jdbc(url=mysql_url, table='programacao_recebimento', mode='append', properties=mysql_properties)
 
-'''
-caminho = 'programacao_recebimento'
-programacao_recebimento.write.csv(caminho, header='True', mode='overwrite')
-'''

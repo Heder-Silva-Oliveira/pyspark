@@ -7,7 +7,6 @@ from pyspark.sql.types import StructType, StructField, IntegerType, DateType , D
 spark = SparkSession.builder.appName("processamento").config("spark.driver.extraClassPath", driver_jar_path).getOrCreate()
 
 
-
 schemaparcela = StructType([
     StructField("NUMERO_NF", IntegerType(), True),
     StructField("DATA_VENCIMENTO", DateType(), True),

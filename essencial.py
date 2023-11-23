@@ -70,7 +70,6 @@ tipo_endereco.write.jdbc(url=mysql_url, table="tipo_endereco", mode="append", pr
 condicao_pagamento.write.jdbc(url=mysql_url, table="condicao_pagamento", mode="append", properties=mysql_properties)
 tipo_desconto.write.jdbc(url=mysql_url, table="tipo_desconto", mode="append", properties=mysql_properties)
 
-#df = spark.createDataFrame([(1, "A"), (2, "B"), (3, "C")], ["ID", "Letra"])
-#df.show()
+
 spark.stop()
 
