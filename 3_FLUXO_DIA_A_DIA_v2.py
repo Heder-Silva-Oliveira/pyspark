@@ -183,9 +183,6 @@ fluxo_dia_a_dia.write.jdbc(url=mysql_url, table='fluxo_caixa_diario', mode='over
 
 #fluxo_dia_a_dia.write.csv("/FileStore/tables/csv/FLUXO_DIA_A_DIA.csv", header=True, mode="overwrite")
 
-
-# COMMAND ----------
-
 #dbutils.fs.rm("dbfs:/FileStore/tables/csv/Fluxo_M2.csv", recurse=True)
 
 # COMMAND ----------
