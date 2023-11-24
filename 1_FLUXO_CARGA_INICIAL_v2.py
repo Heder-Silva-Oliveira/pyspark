@@ -43,12 +43,6 @@ parametro = df.select("COD","DESCRICAO", "VAR_DESCRICAO", "VAR_DT_INICIAL", "VAR
 
 # COMMAND ----------
 
-#parametro.show()
-#hr.show(2)
-#hp.show(2)
-
-# COMMAND ----------
-
 # DBTITLE 1,Fluxo C. Inicial
 data_hoje = datetime.now().strftime('%Y-%m-%d')
 dt_atual = parametro.filter(parametro.COD == 2).select(parametro.VAR_DT_ATUAL).first()[0] # Vai no lugar 2023-10-30
