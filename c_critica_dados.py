@@ -65,8 +65,6 @@ def limpar_tabela(tabela):
     return tabela_limpa_final, deletados_final 
 
 
-
-
 def verifica_cep(cep):
     url = f"https://viacep.com.br/ws/{cep}/json/"
     response = requests.get(url)

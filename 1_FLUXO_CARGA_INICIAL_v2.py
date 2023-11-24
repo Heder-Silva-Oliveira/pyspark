@@ -148,7 +148,7 @@ if  status == 0:
                         (when(fxdr.RECEBIMENTO_DIA.isNull(),0).otherwise(fxdr.RECEBIMENTO_DIA) - when(fxdp.PAGAMENTO_DIA.isNull(),0).otherwise(fxdp.PAGAMENTO_DIA)).alias("SALDO_DIARIO")
                 )
                 
-                window_spec = Window.orderBy('DATA').rowsBetween(Window.unboundedPreceding, 0)
+                window_spec = Window.orderBy('DATA').partitionBy(lit(1)).rowsBetween(Window.unboundedPreceding, 0)
                 fluxo_diario_f = fluxo_diario.withColumn('ACUMULADO_DIARIO',sum('SALDO_DIARIO').over(window_spec)).withColumn("DATA_FECHAMENTO", last_day("DATA")).withColumn('DATA_PROCESSADO',current_timestamp())
 
                 #MENSAL
