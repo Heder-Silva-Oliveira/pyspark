@@ -334,8 +334,9 @@ DROP TABLE IF EXISTS `validacao_compras`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `validacao_compras` (
   `DATA_PROCESSAMENTO` date DEFAULT NULL,
-  `DATA_EMISAO` date DEFAULT NULL,
-  `NUMERO_NF` int DEFAULT NULL
+  `DATA_EMISSAO` date DEFAULT NULL,
+  `NUMERO_NF` int DEFAULT NULL,
+  `CNPJ_FORNECEDOR` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

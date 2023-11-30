@@ -82,7 +82,7 @@ programacao_pagamento = gerar_parcelas(nf_entrada)
 
 programacao_pagamento = programacao_pagamento.join(nf_entrada_bd, "NUMERO_NF", "inner")
 
-programacao_pagamento.show(5)
+programacao_pagamento.show()
 
 programacao_pagamento = programacao_pagamento.select("ID_NF_ENTRADA", "DATA_VENCIMENTO", "NUM_PARCELAS", "VALOR_PARCELA", "STATUS")
 
@@ -95,7 +95,5 @@ programacao_pagamento_final = programacao_pagamento_final.subtract(programacao_p
 
 programacao_pagamento_final.write.jdbc(url = mysql_url,table = 'programacao_pagamento',mode = 'append', properties = mysql_properties)
 
-programacao_pagamento_final_bd.show(10)
+programacao_pagamento_final_bd.show()
   
-
-

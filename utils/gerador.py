@@ -22,6 +22,6 @@ def gera_cnpj():
     return ''.join(map(str, cnpj_com_dvs))
 
 # Gerar 10 CNPJs válidos
-for _ in range(10):
+for _ in range(30):
     cnpj = gera_cnpj()
     print(cnpj)

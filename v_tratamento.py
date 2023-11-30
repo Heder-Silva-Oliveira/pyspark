@@ -306,6 +306,3 @@ conn.close()
 
 # Encerra a sessão Spark
 spark.stop()
-
-
-

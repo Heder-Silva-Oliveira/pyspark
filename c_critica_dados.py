@@ -1,6 +1,5 @@
 #IMPORTS
 from pyspark.sql import SparkSession
-import os
 import pymysql
 from pyspark.sql.functions import col, trim, when, upper, lit, udf, current_timestamp, regexp_extract
 import re
@@ -130,7 +129,7 @@ schemaCompras = StructType([
     StructField("CNPJ_FORNECEDOR", StringType(), True),
     StructField("EMAIL_FORNECEDOR", StringType(), True),
     StructField("TELEFONE_FORNECEDOR", StringType(), True),
-    StructField("NUMERO_NF", LongType(), True),
+    StructField("NUMERO_NF",  LongType(), True),
     StructField("DATA_EMISSAO", DateType(), True),
     StructField("VALOR_NET", DecimalType(8,2), True),
     StructField("VALOR_TRIBUTO", DecimalType(8,2), True),
@@ -180,7 +179,7 @@ schemaTipoDesconto = StructType([
 ])
 
 #T I P O _ E N D E R E C O ---------------------------------------------------------------------------------------------------------------------------------------------------------
-tipo_endereco = spark.read.options(header='True').schema(schemaTipoEndereco).csv('data/tipo_endereco.csv')
+#tipo_endereco = spark.read.options(header='True').schema(schemaTipoEndereco).csv('data/tipo_endereco.csv')
 
 #tipo_endereco_bd = spark.read.options(header='True').schema(schemaTipoEndereco).csv('data/tipo_endereco.csv')
 #tipo_endereco = spark.read.jdbc(url = mysql_url,table = 'tipo_endereco',properties = mysql_properties)
@@ -192,20 +191,20 @@ tipo_endereco_bd = spark.read.format('jdbc')\
 .option('password', mysql_password)\
 .option('driver', mysql_driver)\
 .option('encrypt','false').load()
-
+'''
 tipo_endereco = tipo_endereco.select("DESCRICAO", "SIGLA") 
 tipo_endereco_bd = tipo_endereco_bd.select("DESCRICAO", "SIGLA") 
    
 novos_tipo_endereco = tipo_endereco.join(tipo_endereco_bd, on=["DESCRICAO", "SIGLA"], how="left_anti")
  
 novos_tipo_endereco.write.jdbc(url = mysql_url,table = 'tipo_endereco',mode = 'append', properties = mysql_properties)
+'''
 
-tipo_endereco_bd.show()
  
 
 #T I P O _ D E S C O N T O ---------------------------------------------------------------------------------------------------------------------------------------------------------
-tipo_desconto = spark.read.options(header='True').schema(schemaTipoDesconto).csv('data/tipo_desconto.csv')
-
+#tipo_desconto = spark.read.options(header='True').schema(schemaTipoDesconto).csv('data/tipo_desconto.csv')
+'''
 tipo_desconto_bd = spark.read.format('jdbc')\
     .option('url', mysql_url)\
     .option('dbtable', 'tipo_desconto')\
@@ -214,16 +213,19 @@ tipo_desconto_bd = spark.read.format('jdbc')\
     .option('driver', mysql_driver)\
     .option('encrypt','false').load()
 tipo_desconto_bd.drop("ID_DESCONTO")
-
+'''
+tipo_desconto_bd=spark.read.jdbc(url = mysql_url,table = 'tipo_desconto', properties = mysql_properties)
+tipo_desconto_bd.show()
+'''
 novos_tipo_desconto = tipo_desconto.join(tipo_desconto_bd, on=list(tipo_desconto.columns), how="left_anti")
 
 novos_tipo_desconto.write.jdbc(url = mysql_url,table = 'tipo_desconto',mode = 'append', properties = mysql_properties)
+'''
 
-tipo_desconto_bd.show()
   
 
 #C O N D I C A O   P A G A M E N T O ---------------------------------------------------------------------------------------------------------------------------------------------------------
-condicao_pagamento = spark.read.options(header='True').schema(schemaCondicaoPagamento).csv('data/condicao_pagamento.csv')
+#condicao_pagamento = spark.read.options(header='True').schema(schemaCondicaoPagamento).csv('data/condicao_pagamento.csv')
  
 condicao_pagamento_bd = spark.read.format('jdbc')\
     .option('url', mysql_url)\
@@ -232,14 +234,13 @@ condicao_pagamento_bd = spark.read.format('jdbc')\
     .option('password', mysql_password)\
     .option('driver', mysql_driver)\
     .option('encrypt','false').load()
-condicao_pagamento_bd.drop("ID_CONDICAO")
-
+#condicao_pagamento_bd.drop("ID_CONDICAO")
+'''
 novos_condicao_pagamento = condicao_pagamento.join(condicao_pagamento_bd, on=list(condicao_pagamento.columns), how="left_anti")
 
 novos_condicao_pagamento.write.jdbc(url = mysql_url,table = 'condicao_pagamento',mode = 'append', properties = mysql_properties)
+'''
 
-condicao_pagamento_bd.show()
- 
 
 #C E P ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 '''cep = spark.read.options(header='True', delimiter=';').schema(schemaCEP).csv('data/CEP_NEW.csv')
@@ -270,8 +271,8 @@ cep_final_db.show(10)
 '''
 
 #C O M P R A S ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-compras = spark.read.options(header='True').csv('data/compras_new.csv')
- 
+compras = spark.read.options(header='True').csv('data/compras.csv')
+
 #completando nulos coluna complemento
 compras_complemento = compras.withColumn("COMPLEMENTO", when(col("COMPLEMENTO").isNull(),"N/A").otherwise(col("COMPLEMENTO")))
 
@@ -296,11 +297,9 @@ compras_limpa = compras_tratamento.filter(col("MOTIVO") == "OK").drop("MOTIVO")
 compras_deletado = compras_tratamento.filter(col("MOTIVO") != "OK")
 
 
-
 #limpando cnpj invalido
 compras_cnpj = compras_limpa.withColumn("CNPJ_VALIDO", cnpj_valido("CNPJ_FORNECEDOR"))
 compras_deletado_cnpj = compras_deletado.withColumn("CNPJ_VALIDO", cnpj_valido("CNPJ_FORNECEDOR"))
-
 
 
 compras_cnpj_validado = compras_cnpj.where(compras_cnpj["CNPJ_VALIDO"] == True)
@@ -311,6 +310,7 @@ compras_deletado_cnpj = compras_deletado_cnpj.withColumn("NUMERO_NF", col("NUMER
 compras_deletado_cnpj = spark.createDataFrame(compras_deletado_cnpj.collect(), schema=schemaComprasRej)
 
 compras_deletado_cnpj.write.jdbc(url = mysql_url_stage,table = 'validacao_compras_rejeitados',mode = 'append', properties = mysql_properties)
+
 
 
 validacao_compras_bd = spark.read.format('jdbc')\
@@ -326,25 +326,22 @@ compras_validado_final = compras_cnpj_validado.withColumn("NOME_FORNECEDOR", upp
 
 compras_validado_final = compras_validado_final.withColumn("NUMERO_NF", col("NUMERO_NF").cast("long")).withColumn("DATA_EMISSAO", col("DATA_EMISSAO").cast("date")).withColumn("VALOR_NET", col("VALOR_NET").cast("decimal(8,2)")).withColumn("VALOR_TRIBUTO", col("VALOR_TRIBUTO").cast("decimal(8,2)")).withColumn("VALOR_TOTAL", col("VALOR_TOTAL").cast("decimal(8,2)")).withColumn("QTD_ITEM", col("QTD_ITEM").cast("integer")).withColumn("CEP", col("CEP").cast("integer")).withColumn("NUM_ENDERECO", col("NUM_ENDERECO").cast("integer")).withColumn("DATA_PROCESSAMENTO", col("DATA_PROCESSAMENTO").cast("date")).dropDuplicates()
 
-
-
 compras_validado_final = spark.createDataFrame(compras_validado_final.collect(), schema=schemaCompras)
 
+validacao_compras_bd = validacao_compras_bd.withColumn("NUMERO_NF", col("NUMERO_NF").cast("long"))
 
-compras_validado_final = compras_validado_final.join(validacao_compras_bd, "NUMERO_NF", "leftanti")
-
+compras_validado_final = compras_validado_final.join(validacao_compras_bd, ["NUMERO_NF","CNPJ_FORNECEDOR"], "leftanti")
 
 compras_validado_final.write.jdbc(url = mysql_url_stage,table = 'compras',mode = 'overwrite', properties = mysql_properties)
 
-validacao_compras = compras_validado_final.select("DATA_EMISSAO", "NUMERO_NF").withColumn("DATA_PROCESSAMENTO", current_timestamp())
+validacao_compras = compras_validado_final.select("DATA_PROCESSAMENTO","DATA_EMISSAO", "NUMERO_NF","CNPJ_FORNECEDOR")
 
-validacao_compras = validacao_compras.select("DATA_PROCESSAMENTO", "DATA_EMISSAO", "NUMERO_NF")
+validacao_compras_inserir = validacao_compras.withColumn("NUMERO_NF", col("NUMERO_NF").cast("integer"))\
+    .withColumn("CNPJ_FORNECEDOR", col("CNPJ_FORNECEDOR").cast("string"))
 
-
-validacao_compras.write.jdbc(url = mysql_url_stage,table = 'validacao_compras',mode = 'append', properties = mysql_properties)
+validacao_compras_inserir.write.jdbc(url = mysql_url_stage,table = 'validacao_compras',mode = 'append', properties = mysql_properties)
 
 compras_cnpj_errado.write.jdbc(url = mysql_url_stage,table = 'validacao_compras_rejeitados',mode = 'append', properties = mysql_properties)
-
 
 
 compras_validado_final_db = spark.read.format('jdbc')\
@@ -545,4 +542,4 @@ nf_entrada_final = nf_entrada_final.subtract(nf_repetida)
 
 nf_entrada_final.write.jdbc(url = mysql_url, table = 'notas_fiscais_entrada', mode = 'append', properties = mysql_properties)
 
-nf_entrada_final_db.show(10)
+nf_entrada_final_db.show()

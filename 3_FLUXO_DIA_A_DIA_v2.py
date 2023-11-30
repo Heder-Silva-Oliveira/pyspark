@@ -108,7 +108,7 @@ mes_passado = (mes_atual - 1)
 if mes_passado <= 0:
     mes_passado += 12
 
-exemplo_dt = datetime.strptime('2023-11-23','%Y-%m-%d').date()
+exemplo_dt = datetime.strptime('2023-11-29','%Y-%m-%d').date()
 
 if  status == 1:
         if data_hoje < exemplo_dt: # dt_atual  
@@ -122,9 +122,9 @@ if  status == 1:
                 #fmp.show()
 
                 fx_mensal = fmp.join(fmr, fmp.DATA_FECHAMENTO == fmr.DATA_FECHAMENTO, 'full').select(
-                        fmp.DATA_FECHAMENTO,
-                        fmp.ANO,
-                        fmp.MES,
+                        when(fmp.DATA_FECHAMENTO.isNull(),fmr.DATA_FECHAMENTO).otherwise(fmp.DATA_FECHAMENTO).alias('DATA_FECHAMENTO'),
+                        when(fmp.ANO.isNull(),fmr.ANO).otherwise(fmp.ANO).alias('ANO'),
+                        when(fmp.MES.isNull(),fmr.MES_RECEBIDO).otherwise(fmp.MES).alias('MES',),
                         when(fmr.RECEBIMENTO_MES.isNull(),0).otherwise(fmr.RECEBIMENTO_MES).alias("ENTRADA"),
                         when(fmp.PAGAMENTO_MES.isNull(),0).otherwise(fmp.PAGAMENTO_MES).alias("SAIDA"),        
                         (when(fmr.RECEBIMENTO_MES.isNull(),0).otherwise(fmr.RECEBIMENTO_MES) - when(fmp.PAGAMENTO_MES.isNull(),0).otherwise(fmp.PAGAMENTO_MES)).alias("SALDO_MENSAL")
@@ -155,8 +155,7 @@ if  status == 1:
                 fluxo_dia_a_dia = fluxo_diario.withColumn('ACUMULADO_DIARIO',sum('SALDO_DIARIO').over(window_spec)+saldo_passado).withColumn("DATA_FECHAMENTO", last_day("DATA")).withColumn('DATA_PROCESSADO',current_timestamp())
                 print('IF1')
 
-if  status == 1:
-        if data_hoje >= exemplo_dt: # dt_atual  
+        else: # dt_atual  
                 #DIARIO
                 fxdr0 = hr.filter((((month(hr.DATA_RECEBIDO)) == (mes_atual))) & (((year(hr.DATA_RECEBIDO)) == (ano_atual))))
                 fxdr = fxdr0.withColumn('MES', month('DATA_RECEBIDO').cast(IntegerType())).groupBy('DATA_RECEBIDO', 'MES').agg(sum('VALOR_PAGO').alias('RECEBIMENTO_DIA'))
@@ -176,8 +175,10 @@ if  status == 1:
                 window_spec = Window.orderBy('DATA').partitionBy(lit(1)).rowsBetween(Window.unboundedPreceding, 0)
                 fluxo_dia_a_dia = fluxo_diario.withColumn('ACUMULADO_DIARIO',sum('SALDO_DIARIO').over(window_spec)+acumulado_dia).withColumn("DATA_FECHAMENTO", last_day("DATA")).withColumn('DATA_PROCESSADO',current_timestamp())
                 print('IF2')
-fluxo_dia_a_dia.show()
+                fluxo_dia_a_dia.show()
+                fluxo_dia_a_dia.write.jdbc(url=mysql_url, table='fluxo_caixa_diario', mode='overwrite', properties=mysql_properties)
+else:
+       print("Data não confere")                
 
-fluxo_dia_a_dia.write.jdbc(url=mysql_url, table='fluxo_caixa_diario', mode='overwrite', properties=mysql_properties)
 
 spark.stop()

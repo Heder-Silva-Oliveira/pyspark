@@ -14,6 +14,7 @@ spark = SparkSession.builder \
 programacao_recebimento = spark.read.jdbc(url=mysql_url, table="programacao_recebimento", properties=mysql_properties)
 tipo_desconto = spark.read.jdbc(url=mysql_url, table="tipo_desconto", properties=mysql_properties)
 nf_saida_final = spark.read.jdbc(url=mysql_url, table='notas_fiscais_saida', properties=mysql_properties)
+historico_db = spark.read.jdbc(url=mysql_url, table="historico_recebimento", properties=mysql_properties)
 # Ler dados do MySQL em um DataFrame Spark
 # Conexão
 conn = mysql.connector.connect(
@@ -35,12 +36,12 @@ recebimento
     )
 )
 
-
 # Dados novos
 alterar = (
     programacao_recebimento
     .join(recebimento, (recebimento['ID_NF_SAIDA'] == programacao_recebimento['ID_NF_SAIDA'])
-          & (recebimento.DATA_VENCIMENTO == programacao_recebimento['DATA_VENCIMENTO']), 'inner')
+          & (recebimento.DATA_VENCIMENTO == programacao_recebimento['DATA_VENCIMENTO']), 'inner')\
+          .join(historico_db, "ID_PROG_RECEBIMENTO","left_anti")
     .select(programacao_recebimento['*'], recebimento['VALOR_RECEBIDO'], recebimento['DATA_RECEBIMENTO'])
 )
 
@@ -59,18 +60,21 @@ df_desconto = df_desconto.withColumn("DIAS_DIFERENCA", abs(col('DIAS_DIFERENCA')
     .withColumn("PORCENTAGEM", when((col("TIPO") == False)&(col("VALOR_RECEBIDO") < col("VALOR_PARCELA")), -1).otherwise(col('PORCENTAGEM')))
 
 
+
+
 resultado = df_desconto.join(tipo_desconto,
     (abs(col("DIAS_DIFERENCA")).between(col("MINIMO_DIAS"), col("MAXIMO_DIAS"))) &
     (col("PORCENTAGEM").between(col("MINIMO"), col("MAXIMO")))&
     (tipo_desconto.TIPO_DESCONTO == df_desconto.TIPO)
 ).drop('TIPO',tipo_desconto.MINIMO_DIAS,tipo_desconto.MAXIMO_DIAS,tipo_desconto.MINIMO,tipo_desconto.MAXIMO)
 
+print('resultado')
+resultado.select('ID_PROG_RECEBIMENTO','DIAS_DIFERENCA','ID_DESCONTO','DATA_RECEBIMENTO','VALOR_PARCELA','VALOR_RECEBIDO').show()
+
 historico_divergente = df_desconto.join(resultado, 'ID_PROG_RECEBIMENTO', 'left_anti') \
     .withColumn("ID_DESCONTO", lit(9)) \
     .withColumn("MOTIVO",lit("DESCONTO INVALIDO"))\
     .select('ID_PROG_RECEBIMENTO', 'ID_DESCONTO', 'DATA_RECEBIMENTO', 'VALOR_PARCELA', 'VALOR_RECEBIDO','MOTIVO')
-print('resultado')
-resultado.select('ID_PROG_RECEBIMENTO','DIAS_DIFERENCA','ID_DESCONTO','DATA_RECEBIMENTO','VALOR_PARCELA','VALOR_RECEBIDO').show()
 
 
 # Mostra o resultado dos registros divergentes
@@ -79,12 +83,13 @@ historico_divergente.show()
 
 # Aplique as condições para verificar se DIAS_DIFERENCA e PORCENTAGEM estão dentro dos intervalos
 
-recebimentos_ok = resultado.join(df_desconto, df_desconto.TIPO == resultado.TIPO_DESCONTO).drop(*df_desconto)\
+recebimentos_ok = resultado\
 .select('ID_PROG_RECEBIMENTO','ID_DESCONTO','DATA_RECEBIMENTO','VALOR_PARCELA','VALOR_RECEBIDO').dropDuplicates()
 
 print('recebimentos_ok')
-recebimentos_ok.show()
+#recebimentos_ok.show()
 historico_pre = recebimentos_ok.union(historico_divergente.drop('MOTIVO'))
+
 
 print('historico')
 historico = spark.createDataFrame(historico_pre.collect(), schema = schema_historico)
@@ -95,8 +100,8 @@ historico.show()
 # Mostra o resultado do histórico
 
 
-'''
-'''
+''''''
+
 # Insert pagamento no historico
 historico.write.jdbc(url=mysql_url, table="historico_recebimento", mode="append", properties=mysql_properties)
 

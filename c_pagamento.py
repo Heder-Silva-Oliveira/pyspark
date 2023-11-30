@@ -72,7 +72,7 @@ pagamento_final = spark.createDataFrame(pagamento_limpo.collect(), schema = sche
 
 pagamento_final.write.jdbc(url = mysql_url_stage,table = 'pagamentos_efetuados',mode = 'overwrite', properties = mysql_properties)
 
-pagamento_final_bd.show(5)
+pagamento_limpo.show()
 
 #H I S T O R I C O   P A G A M E N T O--------------------------------------------------------------------------------------------------------------------------------------------------------
 historico_pagamento_final_bd = spark.read.format('jdbc')\
@@ -82,21 +82,33 @@ historico_pagamento_final_bd = spark.read.format('jdbc')\
     .option('password', mysql_password)\
     .option('driver', mysql_driver)\
     .option('encrypt','false').load()
-#historico_pagamento_final_bd = historico_pagamento_final_bd.drop('ID_HIST_PAGAMENTO')    
+historico_pagamento_final_bd = historico_pagamento_final_bd.drop('ID_HIST_PAGAMENTO')    
 
-historico_pagamento = programacao_pagamento_final_bd.join(pagamento_final_bd, [programacao_pagamento_final_bd.ID_NF_ENTRADA == pagamento_final_bd.ID_NF_ENTRADA,\
-programacao_pagamento_final_bd.DATA_VENCIMENTO == pagamento_final_bd.DATA_VENCIMENTO, programacao_pagamento_final_bd.STATUS_PAGAMENTO == 0], "inner")\
-.select(programacao_pagamento_final_bd.ID_PROG_PAGAMENTO, programacao_pagamento_final_bd.ID_NF_ENTRADA,programacao_pagamento_final_bd.NUM_PARCELAS,\
-programacao_pagamento_final_bd.DATA_VENCIMENTO,pagamento_final_bd.DATA_PGT_EFETUADO, programacao_pagamento_final_bd.VALOR_PARCELA, \
-pagamento_final_bd.VALOR_PARCELA_PAGO)
+historico_pagamento = programacao_pagamento_final_bd.join(pagamento_final_bd, 
+ [programacao_pagamento_final_bd.ID_NF_ENTRADA == pagamento_final_bd.ID_NF_ENTRADA,\
+programacao_pagamento_final_bd.DATA_VENCIMENTO == pagamento_final_bd.DATA_VENCIMENTO,\
+programacao_pagamento_final_bd.STATUS_PAGAMENTO == 0],\
+      "inner")\
+.select(programacao_pagamento_final_bd.ID_PROG_PAGAMENTO,\
+    programacao_pagamento_final_bd.ID_NF_ENTRADA,\
+    programacao_pagamento_final_bd.NUM_PARCELAS,\
+    programacao_pagamento_final_bd.DATA_VENCIMENTO,\
+    pagamento_final_bd.DATA_PGT_EFETUADO,\
+    programacao_pagamento_final_bd.VALOR_PARCELA, \
+    pagamento_final_bd.VALOR_PARCELA_PAGO)
 
 
 historico_pagamento_existente = historico_pagamento.join(historico_pagamento_final_bd, on=['ID_PROG_PAGAMENTO'], how='inner').select(\
     historico_pagamento.ID_PROG_PAGAMENTO, historico_pagamento.ID_NF_ENTRADA, historico_pagamento.NUM_PARCELAS, historico_pagamento.DATA_VENCIMENTO,\
     historico_pagamento.DATA_PGT_EFETUADO, historico_pagamento.VALOR_PARCELA, historico_pagamento.VALOR_PARCELA_PAGO)
 
-
+historico_pagamento.show()
 historico_pagamento = historico_pagamento.subtract(historico_pagamento_existente)
+
+
+historico_pagamento.write.jdbc(url = mysql_url,table = 'historico_pagamento',mode = 'append', properties = mysql_properties)
+
+
 
 conn = pymysql.connect(
     host="localhost",
@@ -105,26 +117,27 @@ conn = pymysql.connect(
     database='projeto_financeiro_vendas'
 )
 
-historico_pagamento_update = historico_pagamento.select('ID_PROG_PAGAMENTO')
-rdd = historico_pagamento_update.rdd
+
+rdd = historico_pagamento.select('ID_PROG_PAGAMENTO').collect()
 
 cursor = conn.cursor()
 
-for linha in rdd.collect():
-    valor = linha[0]
-    print(valor)
-    query = f"UPDATE programacao_pagamento SET STATUS_PAGAMENTO = 1 WHERE ID_PROG_PAGAMENTO = {valor}"
+for id in rdd:
+  
+    query = f"UPDATE programacao_pagamento SET STATUS_PAGAMENTO = 1 WHERE ID_PROG_PAGAMENTO = {id['ID_PROG_PAGAMENTO']}"
+
     cursor.execute(query)
     conn.commit()
 cursor.close()
 conn.close()
-
-
-historico_pagamento = programacao_pagamento_final_bd.join(pagamento_final_bd, [programacao_pagamento_final_bd.ID_NF_ENTRADA == pagamento_final_bd.ID_NF_ENTRADA,\
-programacao_pagamento_final_bd.DATA_VENCIMENTO == pagamento_final_bd.DATA_VENCIMENTO, programacao_pagamento_final_bd.STATUS_PAGAMENTO == 1], "inner")\
-.select(programacao_pagamento_final_bd.ID_PROG_PAGAMENTO, programacao_pagamento_final_bd.ID_NF_ENTRADA,programacao_pagamento_final_bd.NUM_PARCELAS,\
-programacao_pagamento_final_bd.DATA_VENCIMENTO,pagamento_final_bd.DATA_PGT_EFETUADO, programacao_pagamento_final_bd.VALOR_PARCELA, \
-pagamento_final_bd.VALOR_PARCELA_PAGO)
+'''
+historico_pagamento = programacao_pagamento_final_bd.join(pagamento_final_bd, 
+[programacao_pagamento_final_bd.ID_NF_ENTRADA == pagamento_final_bd.ID_NF_ENTRADA,\
+programacao_pagamento_final_bd.DATA_VENCIMENTO == pagamento_final_bd.DATA_VENCIMENTO,\
+ programacao_pagamento_final_bd.STATUS_PAGAMENTO == 1], "inner")\
+.select(programacao_pagamento_final_bd.ID_PROG_PAGAMENTO, programacao_pagamento_final_bd.ID_NF_ENTRADA,\
+programacao_pagamento_final_bd.NUM_PARCELAS,programacao_pagamento_final_bd.DATA_VENCIMENTO,\
+pagamento_final_bd.DATA_PGT_EFETUADO, programacao_pagamento_final_bd.VALOR_PARCELA,pagamento_final_bd.VALOR_PARCELA_PAGO)
 
 historico_pagamento_existente = historico_pagamento.join(historico_pagamento_final_bd, on=['ID_PROG_PAGAMENTO'], how='inner').select(\
     historico_pagamento.ID_PROG_PAGAMENTO, historico_pagamento.ID_NF_ENTRADA, historico_pagamento.NUM_PARCELAS, historico_pagamento.DATA_VENCIMENTO,\
@@ -134,4 +147,5 @@ historico_pagamento = historico_pagamento.subtract(historico_pagamento_existente
 
 historico_pagamento.write.jdbc(url = mysql_url,table = 'historico_pagamento',mode = 'append', properties = mysql_properties)
 
-historico_pagamento_final_bd.show()
+historico_pagamento.show()
+'''

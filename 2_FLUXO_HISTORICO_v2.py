@@ -1,7 +1,7 @@
 # Databricks notebook source
 from pyspark.sql import SparkSession, Row
-from pyspark.sql.functions import udf,col,to_date, round, sum, month, year, when, last_day, row_number, split, current_timestamp, lit, desc
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, LongType, DateType,DecimalType,DoubleType,ShortType, TimestampType
+from pyspark.sql.functions import col, sum, month, year, when, last_day,  split, current_timestamp, lit, desc
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType,  DateType,DecimalType, TimestampType
 from pyspark.sql.window import Window
 from datetime import datetime
 from connection.conect import driver_jar_path,mysql_password,mysql_properties,mysql_url,mysql_url_stage,mysql_user
@@ -101,9 +101,9 @@ acumualdo_mes = m.orderBy(desc('DATA_FECHAMENTO')).select(m.VALOR_ACUMULADO_MES)
 
 # COMMAND ----------
 
-# DBTITLE 1,Fluxo Inserção no Historico Diário e Mensal
+# DBTITLE 1, Fluxo Inserção no Historico Diário e Mensal
 data_hoje = datetime.now().date()
-dt_atual = parametro.filter(parametro.COD == 2).select(parametro.VAR_DT_ATUAL).first()[0] # Vai no lugar 2023-10-30
+data_param = parametro.filter(parametro.COD == 2).select(parametro.VAR_DT_ATUAL).first()[0] # Vai no lugar 2023-10-30
 status = parametro.filter(parametro.COD == 1).select(parametro.VAR_STATUS).first()[0] 
 mes_atual = int((datetime.now().strftime('%m')))
 ano_atual = int(datetime.now().strftime('%Y'))
@@ -119,49 +119,58 @@ if mes_passado <= 0:
 exemplo_dt = data_convertida = datetime.strptime('2023-11-03','%Y-%m-%d').date()
 
 if  status == 1:
-        if data_hoje >= exemplo_dt:  
-                #DIARIO
-                fxdr0 = hr.filter((hr.DATA_RECEBIDO > dt) & (((month(hr.DATA_RECEBIDO)) < (mes_passado))) & (((year(hr.DATA_RECEBIDO)) <= (ano_atual))))
-                fxdr = fxdr0.withColumn('MES', month('DATA_RECEBIDO').cast(IntegerType())).groupBy('DATA_RECEBIDO', 'MES').agg(sum('VALOR_PAGO').alias('RECEBIMENTO_DIA'))
-                #fxdr.show()
+    if data_hoje >= data_param:  
+            #DIARIO
+            fxdr0 = hr.filter((hr.DATA_RECEBIDO > dt) & (((month(hr.DATA_RECEBIDO)) < (mes_atual))) & (((year(hr.DATA_RECEBIDO)) <= (ano_atual))))
+            fxdr = fxdr0.withColumn('MES', month('DATA_RECEBIDO').cast(IntegerType())).groupBy('DATA_RECEBIDO', 'MES').agg(sum('VALOR_PAGO').alias('RECEBIMENTO_DIA'))
+            fxdr0.show()
 
-                fxdp0 = hp.filter((hp.DATA_PGT_EFETUADO > dt) & (((month(hp.DATA_PGT_EFETUADO)) < (mes_passado)) & ((year(hp.DATA_PGT_EFETUADO)) <= (ano_atual))))
-                fxdp = fxdp0.withColumn('MES', month('DATA_PGT_EFETUADO').cast(IntegerType())).groupBy('DATA_PGT_EFETUADO', 'MES').agg(sum('VALOR_PARCELA_PAGO').alias('PAGAMENTO_DIA'))
-                #fxdp.show()
+            fxdp0 = hp.filter((hp.DATA_PGT_EFETUADO > dt) & (((month(hp.DATA_PGT_EFETUADO)) < (mes_atual)) & ((year(hp.DATA_PGT_EFETUADO)) <= (ano_atual))))
+            fxdp = fxdp0.withColumn('MES', month('DATA_PGT_EFETUADO').cast(IntegerType())).groupBy('DATA_PGT_EFETUADO', 'MES').agg(sum('VALOR_PARCELA_PAGO').alias('PAGAMENTO_DIA'))
+            #fxdp.show()
 
-                fluxo_diario = fxdp.join(fxdr,fxdp.DATA_PGT_EFETUADO == fxdr.DATA_RECEBIDO, 'full').select(
-                        when(fxdp.DATA_PGT_EFETUADO.isNull(),fxdr.DATA_RECEBIDO).otherwise(fxdp.DATA_PGT_EFETUADO).alias("DATA"),
-                        when(fxdp.PAGAMENTO_DIA.isNull(),0).otherwise(fxdp.PAGAMENTO_DIA).alias("SAIDA"),
-                        when(fxdr.RECEBIMENTO_DIA.isNull(),0).otherwise(fxdr.RECEBIMENTO_DIA).alias("ENTRADA"),
-                        (when(fxdr.RECEBIMENTO_DIA.isNull(),0).otherwise(fxdr.RECEBIMENTO_DIA) - when(fxdp.PAGAMENTO_DIA.isNull(),0).otherwise(fxdp.PAGAMENTO_DIA)).alias("SALDO_DIARIO")
-                )
+            fluxo_diario = fxdp.join(fxdr,fxdp.DATA_PGT_EFETUADO == fxdr.DATA_RECEBIDO, 'full').select(
+                    when(fxdp.DATA_PGT_EFETUADO.isNull(),fxdr.DATA_RECEBIDO).otherwise(fxdp.DATA_PGT_EFETUADO).alias("DATA"),
+                    when(fxdp.PAGAMENTO_DIA.isNull(),0).otherwise(fxdp.PAGAMENTO_DIA).alias("SAIDA"),
+                    when(fxdr.RECEBIMENTO_DIA.isNull(),0).otherwise(fxdr.RECEBIMENTO_DIA).alias("ENTRADA"),
+                    (when(fxdr.RECEBIMENTO_DIA.isNull(),0).otherwise(fxdr.RECEBIMENTO_DIA) - when(fxdp.PAGAMENTO_DIA.isNull(),0).otherwise(fxdp.PAGAMENTO_DIA)).alias("SALDO_DIARIO")
+            )
+            
+            window_spec = Window.orderBy('DATA').partitionBy(lit(1)).rowsBetween(Window.unboundedPreceding, 0)
+            fluxo_diario_f = fluxo_diario.withColumn('ACUMULADO_DIARIO',sum('SALDO_DIARIO').over(window_spec)+acumulado_dia).withColumn("DATA_FECHAMENTO", last_day("DATA")).withColumn('DATA_PROCESSADO',current_timestamp())
+
+            #MENSAL
+            fmr0 = hr.filter(((month(hr.DATA_RECEBIDO)) < (mes_atual)) & ((year(hr.DATA_RECEBIDO)) <= (ano_atual)) & (hr.DATA_RECEBIDO > dt)) #filtro meses      
+            fmr = fmr0.withColumn("DATA_FECHAMENTO", last_day("DATA_RECEBIDO")).groupBy("DATA_FECHAMENTO", year('DATA_RECEBIDO').alias('ANO'), month('DATA_RECEBIDO').alias('MES_RECEBIDO')).agg(sum('VALOR_PAGO').alias('RECEBIMENTO_MES')).orderBy('DATA_FECHAMENTO')
+            
+            fmp0 = hp.filter(((month(hp.DATA_PGT_EFETUADO)) < (mes_atual)) & ((year(hp.DATA_PGT_EFETUADO)) <= (ano_atual)) & (hp.DATA_PGT_EFETUADO > dt))
+            fmp = fmp0.withColumn("DATA_FECHAMENTO", last_day("DATA_PGT_EFETUADO")).groupBy("DATA_FECHAMENTO", year('DATA_PGT_EFETUADO').alias('ANO'), month('DATA_PGT_EFETUADO').alias('MES')).agg(sum('VALOR_PARCELA_PAGO').alias('PAGAMENTO_MES')).orderBy('DATA_FECHAMENTO')
+
+            fx_mensal = fmp.join(fmr, fmp.DATA_FECHAMENTO == fmr.DATA_FECHAMENTO, 'full').select(
+                    when(fmp.DATA_FECHAMENTO.isNull(),fmr.DATA_FECHAMENTO).otherwise(fmp.DATA_FECHAMENTO).alias('DATA_FECHAMENTO'),
+                    when(fmp.ANO.isNull(),fmr.ANO).otherwise(fmp.ANO).alias('ANO'),
+                    when(fmp.MES.isNull(),fmr.MES_RECEBIDO).otherwise(fmp.MES).alias('MES',),
+                    when(fmr.RECEBIMENTO_MES.isNull(),0).otherwise(fmr.RECEBIMENTO_MES).alias("ENTRADA"),
+                    when(fmp.PAGAMENTO_MES.isNull(),0).otherwise(fmp.PAGAMENTO_MES).alias("SAIDA"),        
+                    (when(fmr.RECEBIMENTO_MES.isNull(),0).otherwise(fmr.RECEBIMENTO_MES) - when(fmp.PAGAMENTO_MES.isNull(),0).otherwise(fmp.PAGAMENTO_MES)).alias("SALDO_MENSAL")
+                    )
+
+            window_spec = Window.orderBy('DATA_FECHAMENTO').partitionBy(lit(1)).rowsBetween(Window.unboundedPreceding, 0)
+            fx_mensal_f = fx_mensal.withColumn('VALOR_ACUMULADO_MES', sum('SALDO_MENSAL').over(window_spec)+ acumulado_mes).withColumn('DATA_PROCESSADO',current_timestamp())
                 
-                window_spec = Window.orderBy('DATA').partitionBy(lit(1)).rowsBetween(Window.unboundedPreceding, 0)
-                fluxo_diario_f = fluxo_diario.withColumn('ACUMULADO_DIARIO',sum('SALDO_DIARIO').over(window_spec)+acumulado_dia).withColumn("DATA_FECHAMENTO", last_day("DATA")).withColumn('DATA_PROCESSADO',current_timestamp())
-
-                #MENSAL
-                fmr0 = hr.filter(((month(hr.DATA_RECEBIDO)) < (mes_passado)) & ((year(hr.DATA_RECEBIDO)) <= (ano_atual)) & (hr.DATA_RECEBIDO > dt)) #filtro meses      
-                fmr = fmr0.withColumn("DATA_FECHAMENTO", last_day("DATA_RECEBIDO")).groupBy("DATA_FECHAMENTO", year('DATA_RECEBIDO').alias('ANO'), month('DATA_RECEBIDO').alias('MES_RECEBIDO')).agg(sum('VALOR_PAGO').alias('RECEBIMENTO_MES')).orderBy('DATA_FECHAMENTO')
-               
-                fmp0 = hp.filter(((month(hp.DATA_PGT_EFETUADO)) < (mes_passado)) & ((year(hp.DATA_PGT_EFETUADO)) <= (ano_atual)) & (hp.DATA_PGT_EFETUADO > dt))
-                fmp = fmp0.withColumn("DATA_FECHAMENTO", last_day("DATA_PGT_EFETUADO")).groupBy("DATA_FECHAMENTO", year('DATA_PGT_EFETUADO').alias('ANO'), month('DATA_PGT_EFETUADO').alias('MES')).agg(sum('VALOR_PARCELA_PAGO').alias('PAGAMENTO_MES')).orderBy('DATA_FECHAMENTO')
-
-                fx_mensal = fmp.join(fmr, fmp.DATA_FECHAMENTO == fmr.DATA_FECHAMENTO, 'full').select(
-                        fmp.DATA_FECHAMENTO,
-                        fmp.ANO,
-                        fmp.MES,
-                        when(fmr.RECEBIMENTO_MES.isNull(),0).otherwise(fmr.RECEBIMENTO_MES).alias("ENTRADA"),
-                        when(fmp.PAGAMENTO_MES.isNull(),0).otherwise(fmp.PAGAMENTO_MES).alias("SAIDA"),        
-                        (when(fmr.RECEBIMENTO_MES.isNull(),0).otherwise(fmr.RECEBIMENTO_MES) - when(fmp.PAGAMENTO_MES.isNull(),0).otherwise(fmp.PAGAMENTO_MES)).alias("SALDO_MENSAL")
-                        )
-
-                window_spec = Window.orderBy('DATA_FECHAMENTO').partitionBy(lit(1)).rowsBetween(Window.unboundedPreceding, 0)
-                fx_mensal_f = fx_mensal.withColumn('VALOR_ACUMULADO_MES', sum('SALDO_MENSAL').over(window_spec)+ acumulado_mes).withColumn('DATA_PROCESSADO',current_timestamp())
-                 
-fluxo_diario_f.show()
-fx_mensal_f.show()
-fx_mensal_f.write.jdbc(url=mysql_url, table='fluxo_caixa_mensal_historico', mode='append', properties=mysql_properties)
-fluxo_diario_f.write.jdbc(url=mysql_url, table='fluxo_caixa_diario_historico', mode='append', properties=mysql_properties)
+    fluxo_diario_f.show()
+    fx_mensal_f.show()
+else:
+    print("É a primeira carga")
+#fx_mensal_f.write.jdbc(url=mysql_url, table='fluxo_caixa_mensal_historico', mode='append', properties=mysql_properties)
+#fluxo_diario_f.write.jdbc(url=mysql_url, table='fluxo_caixa_diario_historico', mode='append', properties=mysql_properties)
 # COMMAND ----------
 
 spark.stop()
+'''
+INSERT INTO tb_parametro (COD, DESCRICAO)
+VALUES
+(1, 'CARGA INICIAL,2023-10-01,2023-10-30,2023-11-06,99999,0'),
+(2, 'CARGA HISTORICO MES,2023-10-01,2023-10-30,2023-11-06,99999,0'),
+(3, 'CARGA HISTORICO DIA,2023-09-01,2023-09-30,2023-10-06,12,0'),
+'''
