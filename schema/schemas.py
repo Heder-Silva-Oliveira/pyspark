@@ -110,22 +110,43 @@ schema_historico = StructType([
 ])
 
 shr = StructType([
-                    StructField("ID_HIST_RECEBIMENTO", IntegerType(), True),
-                    StructField("ID_PROG_RECEBIMENTO", IntegerType(), True),
-                    StructField("ID_DESCONTO", IntegerType(), True),
-                    StructField("DATA_RECEBIDO", DateType(), True),
-                    StructField("VALOR_TOTAL_EM_HAVER", DecimalType(16,2), True),
-                    StructField("VALOR_PAGO", DecimalType(16,2), True)
+    StructField("ID_HIST_RECEBIMENTO", IntegerType(), True),
+    StructField("ID_PROG_RECEBIMENTO", IntegerType(), True),
+    StructField("ID_DESCONTO", IntegerType(), True),
+    StructField("DATA_RECEBIDO", DateType(), True),
+    StructField("VALOR_TOTAL_EM_HAVER", DecimalType(16,2), True),
+    StructField("VALOR_PAGO", DecimalType(16,2), True)
 ])
 
 shp = StructType([
-                    StructField("ID_HIST_PAGAMENTO", IntegerType(), True),
-                    StructField("ID_PROG_PAGAMENTO", IntegerType(), True),
-                    StructField("ID_NF_ENTRADA", IntegerType(), True),
-                    StructField("NUM_PARCELAS", IntegerType(), True),
-                    StructField("DATA_VENCIMENTO", DateType(), True),
-                    StructField("DATA_PGT_EFETUADO", DateType(), True),
-                    StructField("VALOR_PARCELA",DecimalType(16,2), True),
-                    StructField("VALOR_PARCELA_PAGO", DecimalType(16,2), True),
+    StructField("ID_HIST_PAGAMENTO", IntegerType(), True),
+    StructField("ID_PROG_PAGAMENTO", IntegerType(), True),
+    StructField("ID_NF_ENTRADA", IntegerType(), True),
+    StructField("NUM_PARCELAS", IntegerType(), True),
+    StructField("DATA_VENCIMENTO", DateType(), True),
+    StructField("DATA_PGT_EFETUADO", DateType(), True),
+    StructField("VALOR_PARCELA",DecimalType(16,2), True),
+    StructField("VALOR_PARCELA_PAGO", DecimalType(16,2), True),
                     
+])
+schemaparcela = StructType([
+    StructField("NUMERO_NF", IntegerType(), True),
+    StructField("DATA_VENCIMENTO", DateType(), True),
+    StructField("VALOR_PARCELA", DecimalType(8,2), True),
+    StructField("NUM_PARCELAS", ShortType(), True),
+    StructField("STATUS", ShortType(), True)
+])
+
+schemaProgramacaoPagamento = StructType([
+    StructField("ID_NF_ENTRADA", IntegerType(), False),
+    StructField("DATA_VENCIMENTO", DateType(), False),
+    StructField("NUM_PARCELAS", IntegerType(), False),
+    StructField("VALOR_PARCELA", DecimalType(8,2), False),
+    StructField("STATUS_PAGAMENTO", ShortType(), False)
+])
+schemaPagamento = StructType([
+    StructField("ID_NF_ENTRADA", IntegerType(), True),
+    StructField("DATA_VENCIMENTO", DateType(), True),
+    StructField("DATA_PGT_EFETUADO", DateType(), True),
+    StructField("VALOR_PARCELA_PAGO", DecimalType(8,2), True)
 ])
