@@ -60,25 +60,7 @@ cnpj_valido_udf = udf(cnpj_valido_func, BooleanType())
 
 cep_data_list = cep_data.select("CEP").rdd.flatMap(lambda x: x).collect()
 # Função limpar_tabela trata nulos e duplicados
-'''
-def limpar_tabela(tabela):
-    colunas = tabela.columns
-    for coluna in colunas:
-        tabela = tabela.withColumn(coluna, trim(col(coluna)))
-        tabela = tabela.withColumn(coluna, when(col(coluna).isNull() | (col(coluna) == ""), "N/A").otherwise(col(coluna)))
 
-    tabela_limpa = tabela.na.drop()#errado precisa alterar
-    tabela_limpa_final = tabela_limpa.dropDuplicates()
-    #tabela_limpa_final = tabela_duplicados.withColumn("MOTIVO", lit("OK"))
-    dados_repetidos = tabela.subtract(tabela_limpa_final)
-    dados_repetidos_motivo = dados_repetidos.withColumn("MOTIVO", lit("Dado Repetido"))
-    deletados = tabela.subtract (tabela_limpa)
-    deletados_motivo = deletados.withColumn("MOTIVO", lit("Dado Nulo"))
-
-    deletados_final = deletados_motivo.union(dados_repetidos_motivo)
-    
-    return tabela_limpa_final, deletados_final
-'''
 # Função verifica se um CEP existe na tabela
 def consultar_cep(cep):
     cep = str(cep)
@@ -90,18 +72,6 @@ def consultar_cep(cep):
 
 consultar_cep_udf = udf(consultar_cep, StringType())
 
-'''
-df = cep_data.select("CEP")
-df1 = df.collect()
-print(df1[:5])
-[Row(CEP='1001000'), Row(CEP='1001001'), Row(CEP='1001010'), Row(CEP='1001900'), Row(CEP='1001901')]
-'''
-
-'''
-print(cep_data_list[:5])
-['1001000', '1001001', '1001010', '1001900', '1001901'] 
-'''
-
 vendas = spark.read.options(header=True).schema(schemaVendas).csv('data/vendas.csv')
 
 #Vendas não registradas
@@ -110,7 +80,6 @@ vendas_lancar = vendas.join(validacao_vendas, on=['NUMERO_NF', 'DATA_PROCESSAMEN
         "DATA_EMISSAO", "VALOR_NET", "VALOR_TRIBUTO", "VALOR_TOTAL", "NOME_ITEM", "QTD_ITEM",
         "CONDICAO_PAGAMENTO", "CEP", "NUM_ENDERECO", "COMPLEMENTO", "TIPO_ENDERECO", "DATA_PROCESSAMENTO"
     )
-
 
 vendas_lancar = vendas_lancar.withColumn("NUMERO_NF", col("NUMERO_NF").cast("integer")).withColumn("NUMERO_NF", col("NUMERO_NF").cast("integer")).withColumn("CEP_VALIDO", consultar_cep_udf("CEP"))\
     .withColumn("CNPJ_VALIDO", cnpj_valido_udf("CNPJ"))

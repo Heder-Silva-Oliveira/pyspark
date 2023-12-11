@@ -28,7 +28,7 @@ nfe_parcelas = nfe.select(col("ID_NF_SAIDA"),col("DATA_EMISSAO"), col("VALOR_TOT
 
 #DataFrame vazio com o esquema correto
 programacao_recebimento = spark.createDataFrame([], schema=schema_parcelas)
-nfe_parcelas.show()
+
 # Função para gerar parcelas retorna todas as parcelas de todas as notas fiscais
 def gerar_parcelas(param_nf):
 
@@ -57,6 +57,5 @@ def gerar_parcelas(param_nf):
 # Exiba as parcelas geradas
 programacao_recebimento = programacao_recebimento.union(gerar_parcelas(nfe)).coalesce(1)
 print('Programação recebimento')
-programacao_recebimento.printSchema()
+programacao_recebimento.show()
 programacao_recebimento.write.jdbc(url=mysql_url, table='programacao_recebimento', mode='append', properties=mysql_properties)
-

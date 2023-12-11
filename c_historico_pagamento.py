@@ -16,7 +16,10 @@ conn = pymysql.connect(
 
 prog_pag_bd=spark.read.jdbc(url=mysql_url, table='programacao_pagamento', properties=mysql_properties)
 historico_pagamento_bd =  spark.read.jdbc(url=mysql_url, table="historico_pagamento", properties=mysql_properties) 
-pagamento = spark.read.options(header='True').csv('data/pagamentos_efetuados.csv') 
+
+
+#--------------------------------------------------------------------------
+pagamento = spark.read.options(header='True').csv('data/pag10.csv') 
 #P A G A M E N T O --------------------------------------------------------------------------------------------------------------------------------------------------------
 
 pagamento_limpo = pagamento.withColumn("ID_NF_ENTRADA", trim(col("ID_NF_ENTRADA")).cast("integer"))\

@@ -26,7 +26,11 @@ conn = mysql.connector.connect(
 )
 
 # Ler csv pagamento e seleciona os recebimentos
-recebimento =    spark.read.options(header='true').schema(schema_recebimento).csv('data/recebimento.csv')
+recebimento =    spark.read.options(header='true').schema(schema_recebimento).csv('data/receb10.csv')
+
+#----------------------------------------------
+
+
 recebimento = (
 recebimento
     .join(nf_saida_final, nf_saida_final['NUMERO_NF'] == recebimento['NUMERO_NF'], 'inner')
@@ -35,7 +39,7 @@ recebimento
         col('VALOR_RECEBIDO'), col('DATA_RECEBIMENTO'), col('DATA_VENCIMENTO')
     )
 )
-
+recebimento.show()
 # Dados novos
 alterar = (
     programacao_recebimento
@@ -100,7 +104,7 @@ historico.show()
 # Mostra o resultado do histórico
 
 
-''''''
+
 
 # Insert pagamento no historico
 historico.write.jdbc(url=mysql_url, table="historico_recebimento", mode="append", properties=mysql_properties)
@@ -122,28 +126,3 @@ conn.close()
 
 # Encerra a sessão Spark
 spark.stop()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

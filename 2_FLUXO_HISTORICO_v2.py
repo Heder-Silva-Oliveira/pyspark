@@ -167,10 +167,3 @@ fluxo_diario_f.write.jdbc(url=mysql_url, table='fluxo_caixa_diario_historico', m
 # COMMAND ----------
 
 spark.stop()
-'''
-INSERT INTO tb_parametro (COD, DESCRICAO)
-VALUES
-(1, 'CARGA INICIAL,2023-10-01,2023-10-30,2023-11-06,99999,0'),
-(2, 'CARGA HISTORICO MES,2023-10-01,2023-10-30,2023-11-06,99999,0'),
-(3, 'CARGA HISTORICO DIA,2023-09-01,2023-09-30,2023-10-06,12,0'),
-'''

@@ -1,3 +1,7 @@
+
+#DESCONTINUADO
+
+'''
 #IMPORTS
 from pyspark.sql import SparkSession
 import pymysql
@@ -178,6 +182,7 @@ schemaTipoDesconto = StructType([
     StructField("STATUS_APROVACAO", ShortType(), False)
 ])
 
+
 #T I P O _ E N D E R E C O ---------------------------------------------------------------------------------------------------------------------------------------------------------
 #tipo_endereco = spark.read.options(header='True').schema(schemaTipoEndereco).csv('data/tipo_endereco.csv')
 
@@ -191,38 +196,15 @@ tipo_endereco_bd = spark.read.format('jdbc')\
 .option('password', mysql_password)\
 .option('driver', mysql_driver)\
 .option('encrypt','false').load()
-'''
-tipo_endereco = tipo_endereco.select("DESCRICAO", "SIGLA") 
-tipo_endereco_bd = tipo_endereco_bd.select("DESCRICAO", "SIGLA") 
-   
-novos_tipo_endereco = tipo_endereco.join(tipo_endereco_bd, on=["DESCRICAO", "SIGLA"], how="left_anti")
- 
-novos_tipo_endereco.write.jdbc(url = mysql_url,table = 'tipo_endereco',mode = 'append', properties = mysql_properties)
-'''
 
  
 
 #T I P O _ D E S C O N T O ---------------------------------------------------------------------------------------------------------------------------------------------------------
 #tipo_desconto = spark.read.options(header='True').schema(schemaTipoDesconto).csv('data/tipo_desconto.csv')
-'''
-tipo_desconto_bd = spark.read.format('jdbc')\
-    .option('url', mysql_url)\
-    .option('dbtable', 'tipo_desconto')\
-    .option('user', mysql_user)\
-    .option('password', mysql_password)\
-    .option('driver', mysql_driver)\
-    .option('encrypt','false').load()
-tipo_desconto_bd.drop("ID_DESCONTO")
-'''
+
 tipo_desconto_bd=spark.read.jdbc(url = mysql_url,table = 'tipo_desconto', properties = mysql_properties)
-tipo_desconto_bd.show()
-'''
-novos_tipo_desconto = tipo_desconto.join(tipo_desconto_bd, on=list(tipo_desconto.columns), how="left_anti")
 
-novos_tipo_desconto.write.jdbc(url = mysql_url,table = 'tipo_desconto',mode = 'append', properties = mysql_properties)
-'''
 
-  
 
 #C O N D I C A O   P A G A M E N T O ---------------------------------------------------------------------------------------------------------------------------------------------------------
 #condicao_pagamento = spark.read.options(header='True').schema(schemaCondicaoPagamento).csv('data/condicao_pagamento.csv')
@@ -235,40 +217,9 @@ condicao_pagamento_bd = spark.read.format('jdbc')\
     .option('driver', mysql_driver)\
     .option('encrypt','false').load()
 #condicao_pagamento_bd.drop("ID_CONDICAO")
-'''
-novos_condicao_pagamento = condicao_pagamento.join(condicao_pagamento_bd, on=list(condicao_pagamento.columns), how="left_anti")
-
-novos_condicao_pagamento.write.jdbc(url = mysql_url,table = 'condicao_pagamento',mode = 'append', properties = mysql_properties)
-'''
 
 
 #C E P ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-'''cep = spark.read.options(header='True', delimiter=';').schema(schemaCEP).csv('data/CEP_NEW.csv')
-cep_limpo, cep_deletado= limpar_tabela(cep)
-
-cep_final_db = spark.read.format('jdbc')\
-    .option('url', mysql_url)\
-    .option('dbtable', 'cep')\
-    .option('user', mysql_user)\
-    .option('password', mysql_password)\
-    .option('driver', mysql_driver)\
-    .option('encrypt','false').load()
-    
-#verificar cep tem 8 digitos
-cep_verificado = cep_limpo.filter(regexp_extract(col("CEP"), r'^\d{8}$', 0) != "")
-#chamada da funcao na api dos IBGE
-
-cep_final = cep_verificado.withColumn("VALIDACAO", verifica_cep_udf(col("CEP")))
-
-cep_final = cep_limpo.withColumn("CEP", col("CEP").cast("integer")).select("CEP", "UF", "CIDADE", "BAIRRO", "LOGRADOURO")
-cep_final = spark.createDataFrame(cep_final.collect(), schema = schemaCEP)
-
-novos_cep = cep_final.join(cep_final_db, on=list(cep_final.columns), how="left_anti")
-
-novos_cep.write.jdbc(url = mysql_url,table = 'cep',mode = 'append', properties = mysql_properties)
-
-cep_final_db.show(10)
-'''
 
 #C O M P R A S ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 compras = spark.read.options(header='True').csv('data/compras.csv')
@@ -352,7 +303,7 @@ compras_validado_final_db = spark.read.format('jdbc')\
     .option('driver', mysql_driver)\
     .option('encrypt','false').load()
     
-compras_validado_final_db.show(10)
+
 
 #F O R N E C E D O R ---------------------------------------------------------------------------------------------------------------------------------------------------------
 fornecedor = compras_validado_final_db.select("NOME_FORNECEDOR", "CNPJ_FORNECEDOR", "EMAIL_FORNECEDOR", "TELEFONE_FORNECEDOR").distinct()
@@ -410,7 +361,7 @@ finally:
     cursor.close()
     conn.close()
 
-fornecedor_final_db.show()
+
 
 
 
@@ -503,7 +454,7 @@ novos_enderecos.write.jdbc(url = mysql_url, table = 'enderecos_fornecedores', mo
 
 
 
-endereco_fornecedor_final_db.show(10)
+
 
 
 #N O T A   E N T R A D A ---------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -534,6 +485,7 @@ nf_entrada_final = spark.createDataFrame(nf_entrada_final.collect(), schema = sc
 #achar as notas fiscais que ja existes
 #dropar da tabela final antes de popular banco
 
+
 nf_repetida = nf_entrada_final.join(nf_entrada_final_db, 'NUMERO_NF', how='inner').select(nf_entrada_final["ID_FORNECEDOR"], nf_entrada_final["ID_CONDICAO"],\
     nf_entrada_final["NUMERO_NF"], nf_entrada_final["DATA_EMISSAO"], nf_entrada_final["VALOR_NET"], nf_entrada_final["VALOR_TRIBUTO"], \
     nf_entrada_final["VALOR_TOTAL"], nf_entrada_final["NOME_ITEM"], nf_entrada_final["QTD_ITEM"])
@@ -542,4 +494,6 @@ nf_entrada_final = nf_entrada_final.subtract(nf_repetida)
 
 nf_entrada_final.write.jdbc(url = mysql_url, table = 'notas_fiscais_entrada', mode = 'append', properties = mysql_properties)
 
-nf_entrada_final_db.show()
+
+
+'''
